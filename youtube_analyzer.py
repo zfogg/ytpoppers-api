@@ -1,6 +1,8 @@
 import os
 import argparse
-from typing import List, Dict
+import re
+from urllib.parse import urlparse, parse_qs
+from typing import List, Dict, Optional, Tuple
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 
@@ -9,7 +11,69 @@ class YouTubeAnalyzer:
         """Initialize the YouTube API client."""
         self.youtube = build('youtube', 'v3', developerKey=api_key)
 
-    def get_channel_videos(self, channel_id: str, max_results: int = 50) -> List[Dict]:
+    def get_channel_id(self, channel_input: str) -> str:
+        """
+        Extract channel ID from various input formats:
+        - Channel ID (e.g., UC...)
+        - Channel URL (e.g., https://www.youtube.com/channel/UC...)
+        - Custom URL (e.g., https://www.youtube.com/c/channelname)
+        - Legacy username URL (e.g., https://www.youtube.com/user/username)
+        - Handle URL (e.g., https://www.youtube.com/@handle)
+        - Plain username or handle
+        
+        Args:
+            channel_input: Channel identifier (URL, ID, username, or handle)
+            
+        Returns:
+            YouTube channel ID
+        
+        Raises:
+            ValueError: If channel cannot be found or input format is invalid
+        """
+        # If it's already a channel ID
+        if channel_input.startswith('UC') and len(channel_input) == 24:
+            return channel_input
+
+        # Check if it's a URL
+        if channel_input.startswith(('http://', 'https://')):
+            parsed_url = urlparse(channel_input)
+            path_parts = [p for p in parsed_url.path.split('/') if p]
+
+            # Handle youtube.com/channel/UC... format
+            if len(path_parts) >= 2 and path_parts[0] == 'channel':
+                return path_parts[1]
+
+            # Handle other formats (custom URLs, usernames, handles)
+            if len(path_parts) >= 1:
+                search_term = path_parts[-1]
+                if search_term.startswith('@'):
+                    search_term = search_term[1:]  # Remove @ from handle
+            else:
+                raise ValueError("Invalid YouTube URL format")
+        else:
+            # Handle raw username/handle input
+            search_term = channel_input
+            if search_term.startswith('@'):
+                search_term = search_term[1:]
+
+        # Search for the channel
+        try:
+            search_response = self.youtube.search().list(
+                part='snippet',
+                q=search_term,
+                type='channel',
+                maxResults=1
+            ).execute()
+
+            if not search_response.get('items'):
+                raise ValueError(f"No channel found for: {channel_input}")
+
+            return search_response['items'][0]['snippet']['channelId']
+
+        except Exception as e:
+            raise ValueError(f"Error finding channel: {str(e)}")
+
+    def get_channel_videos(self, channel_id: str, max_results: int = 50) -> Tuple[int, List[Dict]]:
         """
         Fetch ALL videos from a channel and return the top ones sorted by view count.
         
@@ -18,7 +82,7 @@ class YouTubeAnalyzer:
             max_results: Maximum number of videos to return in final results (default: 50)
             
         Returns:
-            List of video information dictionaries sorted by view count
+            Tuple of total videos and list of video information dictionaries sorted by view count
         """
         # First, get the channel's uploaded videos playlist ID
         channel_response = self.youtube.channels().list(
@@ -104,7 +168,8 @@ def main():
 
     try:
         analyzer = YouTubeAnalyzer(api_key)
-        total_videos, videos = analyzer.get_channel_videos(args.channel_id, args.max_results)
+        channel_id = analyzer.get_channel_id(args.channel_id)
+        total_videos, videos = analyzer.get_channel_videos(channel_id, args.max_results)
         analyzer.print_video_stats(total_videos, videos)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
