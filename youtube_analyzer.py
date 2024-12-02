@@ -8,7 +8,6 @@ class YouTubeAnalyzer:
     def __init__(self, api_key: str):
         """Initialize the YouTube API client."""
         self.youtube = build('youtube', 'v3', developerKey=api_key)
-        self.total_videos = 0
 
     def get_channel_videos(self, channel_id: str, max_results: int = 50) -> List[Dict]:
         """
@@ -34,6 +33,7 @@ class YouTubeAnalyzer:
 
         # Get videos from the uploads playlist
         videos = []
+        total_videos = 0
         next_page_token = None
 
         while True:
@@ -63,21 +63,21 @@ class YouTubeAnalyzer:
                     'url': f"https://youtube.com/watch?v={video['id']}"
                 }
                 videos.append(video_info)
-                self.total_videos += 1
+                total_videos += 1
 
             next_page_token = playlist_response.get('nextPageToken')
-            print(f"Fetched {self.total_videos} videos so far...")
+            print(f"Fetched {total_videos} videos so far...")
             
             if not next_page_token:
                 break
 
-        print(f"\nFinished fetching all {self.total_videos} videos from the channel")
+        print(f"\nFinished fetching all {total_videos} videos from the channel")
         # Sort all videos by view count and return the top max_results
-        return sorted(videos, key=lambda x: x['view_count'], reverse=True)[:max_results]
+        return total_videos, sorted(videos, key=lambda x: x['view_count'], reverse=True)[:max_results]
 
-    def print_video_stats(self, videos: List[Dict]) -> None:
+    def print_video_stats(self, total_videos: int, videos: List[Dict]) -> None:
         """Print formatted video statistics."""
-        print(f"\nExamined {self.total_videos} total videos")
+        print(f"\nExamined {total_videos} total videos")
         print("\nTop Most Popular Videos:")
         print("-" * 100)
         
@@ -104,8 +104,8 @@ def main():
 
     try:
         analyzer = YouTubeAnalyzer(api_key)
-        videos = analyzer.get_channel_videos(args.channel_id, args.max_results)
-        analyzer.print_video_stats(videos)
+        total_videos, videos = analyzer.get_channel_videos(args.channel_id, args.max_results)
+        analyzer.print_video_stats(total_videos, videos)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
