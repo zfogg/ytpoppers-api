@@ -124,7 +124,9 @@ class YouTubeAnalyzer:
                     'view_count': int(video['statistics'].get('viewCount', 0)),
                     'like_count': int(video['statistics'].get('likeCount', 0)),
                     'comment_count': int(video['statistics'].get('commentCount', 0)),
-                    'url': f"https://youtube.com/watch?v={video['id']}"
+                    'url': f"https://youtube.com/watch?v={video['id']}",
+                    'published_at': video['snippet']['publishedAt'],
+                    'thumbnail_url': video['snippet']['thumbnails']['maxres']['url'] if 'maxres' in video['snippet']['thumbnails'] else video['snippet']['thumbnails']['high']['url']
                 }
                 videos.append(video_info)
                 total_videos += 1
@@ -150,6 +152,7 @@ class YouTubeAnalyzer:
             print(f"   Views: {video['view_count']:,}")
             print(f"   Likes: {video['like_count']:,}")
             print(f"   Comments: {video['comment_count']:,}")
+            print(f"   Published at: {video['published_at']}")
             print(f"   URL: {video['url']}")
             print("-" * 100)
 
