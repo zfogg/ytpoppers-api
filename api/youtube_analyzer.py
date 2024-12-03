@@ -1,10 +1,7 @@
-import os
-import argparse
-import re
 from urllib.parse import urlparse, parse_qs
+import re
 from typing import List, Dict, Optional, Tuple
 from googleapiclient.discovery import build
-from dotenv import load_dotenv
 
 class YouTubeAnalyzer:
     def __init__(self, api_key: str):
@@ -155,27 +152,3 @@ class YouTubeAnalyzer:
             print(f"   Published at: {video['published_at']}")
             print(f"   URL: {video['url']}")
             print("-" * 100)
-
-def main():
-    parser = argparse.ArgumentParser(description='Analyze YouTube channel videos')
-    parser.add_argument('--channel-id', required=True, help='YouTube channel ID')
-    parser.add_argument('--max-results', type=int, default=10, help='Maximum number of videos to display')
-    args = parser.parse_args()
-
-    # Load environment variables
-    load_dotenv()
-    api_key = os.getenv('YOUTUBE_API_KEY')
-    
-    if not api_key:
-        raise ValueError("Please set YOUTUBE_API_KEY in your .env file")
-
-    try:
-        analyzer = YouTubeAnalyzer(api_key)
-        channel_id = analyzer.get_channel_id(args.channel_id)
-        total_videos, videos = analyzer.get_channel_videos(channel_id, args.max_results)
-        analyzer.print_video_stats(total_videos, videos)
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-
-if __name__ == '__main__':
-    main()
