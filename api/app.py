@@ -70,9 +70,3 @@ def analyze_channel():
         return jsonify({
             'error': str(e)
         }), 500
-
-
-if __name__ == '__main__':
-    port = os.getenv('PORT', 5000)
-    print(f"Starting server on http://0.0.0.0:{port}")
-    serve(app, host='0.0.0.0', port=port)
