@@ -1,13 +1,13 @@
 import os
-from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from waitress import serve
-from api.youtube_analyzer import YouTubeAnalyzer
+from .youtube_analyzer import YouTubeAnalyzer
+from .logger import logger
 
 # Load environment variables
+from dotenv import load_dotenv
 load_dotenv()
 api_key = os.getenv('YOUTUBE_API_KEY')
-
 if not api_key:
     raise ValueError("Please set YOUTUBE_API_KEY in your .env file")
 
@@ -16,6 +16,7 @@ analyzer = YouTubeAnalyzer(api_key)
 
 @app.route('/', methods=['GET'])
 def index():
+    logger.info("Index page accessed")
     return jsonify({
         'status': 'ok'
     }), 200
@@ -53,8 +54,12 @@ def analyze_channel():
         # First get the channel ID from the input
         channel_id = analyzer.get_channel_id(channel_input)
 
+        logger.info(f"Search term \"{channel_input}\" returned channel iD = {channel_id}")
+
         # Then get the videos using the channel ID
         total_videos, videos = analyzer.get_channel_videos(channel_id, max_results)
+
+
 
         return jsonify({
             'channel_id': channel_id,

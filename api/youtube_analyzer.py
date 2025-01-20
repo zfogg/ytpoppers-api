@@ -1,7 +1,7 @@
 from urllib.parse import urlparse, parse_qs
-import re
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Tuple
 from googleapiclient.discovery import build
+from .logger import logger
 
 class YouTubeAnalyzer:
     def __init__(self, api_key: str):
@@ -17,13 +17,13 @@ class YouTubeAnalyzer:
         - Legacy username URL (e.g., https://www.youtube.com/user/username)
         - Handle URL (e.g., https://www.youtube.com/@handle)
         - Plain username or handle
-        
+
         Args:
             channel_input: Channel identifier (URL, ID, username, or handle)
-            
+
         Returns:
             YouTube channel ID
-        
+
         Raises:
             ValueError: If channel cannot be found or input format is invalid
         """
@@ -73,11 +73,11 @@ class YouTubeAnalyzer:
     def get_channel_videos(self, channel_id: str, max_results: int = 50) -> Tuple[int, List[Dict]]:
         """
         Fetch ALL videos from a channel and return the top ones sorted by view count.
-        
+
         Args:
             channel_id: The YouTube channel ID
             max_results: Maximum number of videos to return in final results (default: 50)
-            
+
         Returns:
             Tuple of total videos and list of video information dictionaries sorted by view count
         """
@@ -96,6 +96,8 @@ class YouTubeAnalyzer:
         videos = []
         total_videos = 0
         next_page_token = None
+
+        logger.info(f"Processing all videos for channel {channel_id}")
 
         while True:
             playlist_response = self.youtube.playlistItems().list(
@@ -129,12 +131,12 @@ class YouTubeAnalyzer:
                 total_videos += 1
 
             next_page_token = playlist_response.get('nextPageToken')
-            print(f"Fetched {total_videos} videos so far...")
-            
+            #print(f"Fetched {total_videos} videos so far...")
+
             if not next_page_token:
                 break
 
-        print(f"\nFinished fetching all {total_videos} videos from the channel")
+        logger.info(f"Processed all {total_videos} videos from channel {channel_id}")
         # Sort all videos by view count and return the top max_results
         return total_videos, sorted(videos, key=lambda x: x['view_count'], reverse=True)[:max_results]
 
@@ -143,7 +145,7 @@ class YouTubeAnalyzer:
         print(f"\nExamined {total_videos} total videos")
         print("\nTop Most Popular Videos:")
         print("-" * 100)
-        
+
         for i, video in enumerate(videos, 1):
             print(f"{i}. {video['title']}")
             print(f"   Views: {video['view_count']:,}")
