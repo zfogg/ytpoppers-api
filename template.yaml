@@ -8,7 +8,7 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 10
+    Timeout: 30
 
 Resources:
   FlaskFunction:
@@ -16,9 +16,17 @@ Resources:
     Properties:
       PackageType: Image
       MemorySize: 256
+      Tracing: Active
+      LoggingConfig:
+        LogFormat: Text
       Events:
         ApiEvent:
           Type: HttpApi
+      Environment:
+        Variables:
+          PORT: 5000  # Match your Flask port
+          AWS_LWA_ENABLE_COMPRESSION: true
+          AWS_LWA_READINESS_CHECK_PATH: /  # Or whatever your healthcheck path is
 
     Metadata:
       Dockerfile: Dockerfile

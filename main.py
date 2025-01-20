@@ -1,6 +1,7 @@
 import os
 import argparse
 from waitress import serve
+import awsgi
 from api.youtube_analyzer import YouTubeAnalyzer
 from api.app import app
 from api.logger import logger
@@ -32,6 +33,9 @@ def main():
         analyzer.print_video_stats(total_videos, videos)
     except Exception as e:
         logger.error(f"An error occurred while trying to analyze the channel's videos: {str(e)}")
+
+def lambda_handler(event, context):
+    return awsgi.response(app, event, context)
 
 if __name__ == '__main__':
     main()

@@ -6,3 +6,4 @@ s3_prefix = "ytpoppers-api"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
 image_repositories = ["FlaskFunction=345594574298.dkr.ecr.us-east-1.amazonaws.com/ytpoppersapibae1d554/flaskfunctionf9708d47repo"]
+disable_rollback = true
