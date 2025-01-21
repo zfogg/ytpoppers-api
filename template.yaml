@@ -5,14 +5,73 @@ Description: >
 
   Sample SAM Template for flask
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 30
+  Api:
+    BinaryMediaTypes:
+      - "*/*"
+
+Parameters:
+  AuthenticationPrompt:
+    Type: String
+    Default: Serverless Dash Frontend Authentication
 
 Resources:
+  FlaskApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: BasicAuth
+        Authorizers:
+          BasicAuth:
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            Identity:
+              Header: Authorization
+              ValidationExpression: "^Basic.*"
+              ReauthorizeEvery: 300
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: "Flask API"
+          version: "1.0"
+        securityDefinitions:
+          BasicAuth:
+            type: apiKey
+            name: Authorization
+            in: header
+            x-amazon-apigateway-authtype: custom
+            x-amazon-apigateway-authorizer:
+              type: token
+              authorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunction.Arn}/invocations"
+              authorizerResultTtlInSeconds: 300
+        paths:
+          /:
+            get:
+              security:
+                - BasicAuth: []
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FlaskFunction.Arn}/invocations"
+                passthroughBehavior: when_no_match
+          /{proxy+}:
+            get:
+              security:
+                - BasicAuth: []
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FlaskFunction.Arn}/invocations"
+                passthroughBehavior: when_no_match
+
   FlaskFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./
+      DockerTag: python3.8-v1
     Properties:
       PackageType: Image
       MemorySize: 256
@@ -20,23 +79,55 @@ Resources:
       LoggingConfig:
         LogFormat: Text
       Events:
-        ApiEvent:
-          Type: HttpApi
+        RootPath:
+          Type: Api
+          Properties:
+            RestApiId: !Ref FlaskApi
+            Path: /
+            Method: GET
+        ProxyPath:
+          Type: Api
+          Properties:
+            RestApiId: !Ref FlaskApi
+            Path: /{proxy+}
+            Method: GET
       Environment:
         Variables:
           PORT: 5000  # Match your Flask port
           AWS_LWA_ENABLE_COMPRESSION: true
           AWS_LWA_READINESS_CHECK_PATH: /  # Or whatever your healthcheck path is
 
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: ./
-      DockerTag: python3.8-v1
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: basic_auth_authorizer/
+      Handler: basic_auth.lambda_handler
+      Runtime: python3.12
+      Environment:
+        Variables:
+          CREDENTIAL_PROVIDER_NAME: SECRETS_MANAGER
+          SECRETSMANAGER_CREDENTIAL_SECRET_NAME: !GetAtt SecretsManagerSecretWithCredentials.Id
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SecretsManagerSecretWithCredentials
+
+  BasicAuthPrompt:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      ResponseType: UNAUTHORIZED
+      RestApiId: !Ref FlaskApi
+      StatusCode: "401"
+      ResponseParameters:
+        gatewayresponse.header.WWW-Authenticate: !Sub '''Basic realm="${AuthenticationPrompt}"'''
+
+  SecretsManagerSecretWithCredentials:
+    Type: AWS::SecretsManager::Secret
+    Properties: {}
 
 Outputs:
   FlaskApi:
     Description: "API Gateway endpoint URL for Prod stage for Flask function"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/"
+    Value: !Sub "https://${FlaskApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
   FlaskFunction:
     Description: "Flask Lambda Function ARN"
     Value: !GetAtt FlaskFunction.Arn

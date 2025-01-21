@@ -3,3 +3,4 @@ python-dotenv==1.0.0
 flask==3.0.0
 waitress==2.1.2
 aws-wsgi==0.2.7
+boto3==1.36.2
