@@ -124,11 +124,25 @@ def lambda_handler(event, _context):
             }
             return policy
         else:
-            raise UnauthorizedException()
+            raise UnauthorizedException("Invalid credentials")
 
+    except UnauthorizedException:
+        return {
+            "principalId": "unauthorized",
+            "policyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Action": "execute-api:Invoke",
+                        "Effect": "Deny",
+                        "Resource": event['methodArn']
+                    }
+                ]
+            }
+        }
     except Exception as e:
-        print("UNAUTHORIZED", e)
-        return "Unauthorized"
+        print(f"Error in authorization: {e}")
+        raise
 
 # def lambda_handler(event, context):
 #     token = event['authorizationToken']
