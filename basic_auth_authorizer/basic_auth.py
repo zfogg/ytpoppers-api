@@ -1,3 +1,6 @@
+# * INFO: I modified this file and the template.yaml from the following resources:
+# * INFO: https://www.tecracer.com/blog/2024/03/adding-basic-authentication-to-the-serverless-dash-app.html
+# * INFO: https://github.com/MauriceBrg/aws-blog.de-projects/tree/master/sam-dash-basicauth
 """
 Module to add basic auth to a dash app with different credential sources.
 """
