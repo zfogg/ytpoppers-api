@@ -15,7 +15,7 @@ Globals:
 Parameters:
   AuthenticationPrompt:
     Type: String
-    Default: Serverless Dash Frontend Authentication
+    Default: ytpoppers-api
 
 Resources:
   FlaskApi:
